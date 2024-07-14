@@ -1,0 +1,246 @@
+'''Function to set window context for AI objects
+Function cfGlUAISetWindowContext(objWindow)
+	statufFlag ="FAIL"
+	Call retObject(objWindow)
+	If returnObject.Exist(strWaitTime2) Then
+		AIUtil.SetContext returnObject
+		statusFlag ="PASS"
+	Else
+		statufFlag ="FAIL"
+	End If
+End Function
+
+Function cfGlUAIElementCheck(obj)
+	elementFlag="False"
+	Call retObject(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		If returnObject.CheckExists(true) Then
+			elementFlag="True"
+		Else
+			elementFlag="False"
+		End If
+	Else
+		elementFlag="False"
+	End If
+End Function
+
+Public Function cfGlUAIElementClick(obj)
+	Call cfGlUAIElementCheck(obj)
+	statusFlag ="FAIL"
+	If  elementFlag="True" Then
+		returnObject.Click
+	Set returnObject = Nothing
+		statusFlag ="PASS"
+		wait 1
+	Else
+		print "object doesnt exist or not visible"
+		statusFlag="FAIL"
+	End If
+End Function
+
+'Provide window object and .png file path of object to be clicked
+Public Function cfGlUAIClickOnImageObject(objWindow,objPath)
+	statusFlag ="FAIL"
+	call cfGlUAIsetWindowContext(objWindow)
+	AIUtil.RegisterCustomClass "object", objPath
+	If AIUtil("object").Exist Then
+		AIUtil("object").Click
+		statusFlag ="PASS"
+	Else
+		statusFlag ="FAIL"
+	End If
+End Function
+
+Public Function cfGlUAICaptureImage(objWindow,obj, FullFileName)
+	statufFlag ="FAIL"
+	call cfGlUAISetWindowContext(objWindow)
+	Call cfGlUAIElementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		returnObject.CaptureBitmap  FullFileName, True
+		statusFlag ="PASS"
+	Else
+		statufFlag ="FAIL"
+	End If
+End Function
+
+Public Function cfGlUAIGetValue(obj)
+	statufFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		value = returnObject.GetValue
+		print value
+		cfGlUAIGetValue = value
+		statusFlag ="PASS"
+	Else
+		statufFlag ="FAIL"
+	End If
+End Function
+
+Public Function cfGlUAISetText(obj, text)
+	statufFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		returnObject.setText(text)
+		statusFlag ="PASS"
+	Else
+		statufFlag ="FAIL"
+	End If
+End Function
+
+Public Function cfGlUAIselectOption(obj, optionValue)
+	statufFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		returnObject.Select optionValue
+		statusFlag ="PASS"
+	Else
+		statufFlag ="FAIL"
+	End If
+End  Function
+
+Public Function cfGlUAIsetState(obj, value)
+	statufFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		returnObject.SetState value
+		statusFlag ="PASS"
+	Else
+		statufFlag ="FAIL"
+	End If
+End  Function
+
+Public Function cfGlUAIDoubleClick(obj, xCoordinate, yCoordinate)
+	statufFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		returnObject.DoubleClick xCoordinate, yCoordinate
+		statusFlag ="PASS"
+	Else
+		statufFlag ="FAIL"
+	End If
+End  Function
+
+Public Function cfGlUAICheckState(obj, value)
+	statusFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.CheckState(value) = True Then
+		statusFlag ="PASS"
+		print("Valid State")
+	Else
+		statusFlag ="FAIL"
+		print("Invalid State")
+	End If 
+End  Function
+
+Public Function cfGlUAIGetAllProperties(obj)
+	statusFlag ="FAIL"
+	Set returnDictionary = CreateObject("Scripting.Dictionary")
+	Call cfGlUAIelementCheck(obj)
+	If returnDictionary.Count >0 Then
+		statusFlag ="PASS"
+		returnDictionary = returnObject.GetAllProperties
+		cfGlUAIGetAllProperties = returnDictionary
+	Else
+		statusFlag ="FAIL"
+	End If 
+End Function
+
+Public Function cfGlUAIGetObjectProperty(obj, propertyName)
+	statusFlag ="FAIL"
+	Dim returnValue
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		statusFlag ="PASS"
+		returnValue = returnObject.GetObjectProperty(propertyName)
+		cfGlUAIGetObjectProperty = returnValue
+	Else
+		statusFlag ="FAIL"
+	End If 
+	
+End Function
+
+Public Function cfGlUAIHover(obj, duration)
+	statusFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		statusFlag ="PASS"
+		returnObject.Hover duration
+	Else
+		statusFlag ="FAIL"
+	End If 
+End Function
+
+Public Function cfGlUAILongClick(obj, duration, xCoordinate, yCoordinate)
+	statusFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		returnObject.LongClick duration, xCoordinate, yCoordinate
+		statusFlag ="PASS"
+	Else
+		statusFlag ="FAIL"
+	End If 
+End Function
+
+Public Function cfGlUAIMultiClick(obj, noOfClicks, interval, xCoordinate, yCoordinate)
+	statusFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		returnObject.MultiClick noOfClicks, interval, xCoordinate, yCoordinate
+		statusFlag ="PASS"
+	Else
+		statusFlag ="FAIL"
+	End If 
+End Function
+
+Public Function cfGlUAIRightClick(obj, xCoordinate, yCoordinate)
+	statusFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		returnObject.RightClick xCoordinate, yCoordinate
+		statusFlag ="PASS"
+	Else
+		statusFlag ="FAIL"
+	End If 
+End Function
+
+Public Function cfGlUAISetTextSecure(obj, encodedText)
+	statusFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		returnObject.SetTextSecure encodedText
+		statusFlag ="PASS"
+	Else
+		statusFlag ="FAIL"
+	End If 
+End Function
+
+Public Function cfGlUAITypeSecure(obj, secureText)
+	statusFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		returnObject.TypeSecure secureText
+		statusFlag ="PASS"
+	Else
+		statusFlag ="FAIL"
+	End If 
+End Function
+
+'Possible values:  up, down, left, right.
+Public Function cfGlUAIScroll(direction, amountToScroll)
+	AIUtil.Scroll direction, amountToScroll
+End Function
+
+Public Function cfGlUAIScrollOnObject(obj, direction, amountToScroll)
+	statusFlag ="FAIL"
+	Call cfGlUAIelementCheck(obj)
+	If returnObject.Exist(strWaitTime2) Then
+		AIUtil.ScrollOnObject returnObject, direction, amountToScroll
+		statusFlag ="PASS"
+	Else
+		statusFlag ="FAIL"
+	End If 
+End Function
+
+
+
+

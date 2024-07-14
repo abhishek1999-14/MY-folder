@@ -1,0 +1,89 @@
+Public outFile, statusFlag, dbSuiteName, dbCounter, dbReportFile, dbFileName, dbAckName, dbFile, timeVal, screenPath, currTestCaseId, currTestCaseName, currTestStepScreenshot, replaceStrVal
+Public strExecutionTime, endExcutionTime
+stepNum = 15
+tcNum = 30
+testStepInputStart = 8
+
+'dbPath = "\\ap9181\devReports" 'ITT
+'dbPath = "\\ap9181\uatReports" 'UAT
+dbPath = "\\ap9181\prodReports" 'PROD
+'dbFile = "\testCases.txt"
+dbSep = ">"
+dbTCSep = "|"
+dbKeyID = "testSuite"
+logFlag = "Y"
+
+'utafRestAPIEndPoint = "http://ap8825:9999/" 'ITT
+'utafRestAPIEndPoint = "http://el9361.int.corp:8080/" 'UAT
+'utafRestAPIEndPoint = "http://el9545.int.corp:8080/" 'PROD
+'utafRestAPIEndPoint = "https://utaf:8080/" 'PROD New - HTTPS
+utafRestAPIEndPoint = "http://utaf:8443/" 'PROD New - HTTP
+'utafRestAPIEndPoint = "http://utaf-dr:8443/" 'DR
+utafRestAPIGetTestCaseForExecution = "utaf-service/getTestCaseForExecution"
+utafRestAPIUpdateTestcaseParam = "utaf-service/updateTestcaseParam"
+utafRestAPIUpdateTestSuiteExecution = "utaf-service/updateTestSuiteExecution"
+utafRestAPIUpdateTestSuiteExecutionNew = "utaf-service/updateTestSuiteExecutionNew"
+utafRestAPICheckFailedTestcase = "utaf-service/checkFailedTestcase"
+utafUpdateVDI = "utaf-service/updateVDI"
+utafVDIHealthCheck = "utaf-service/vdiHealthcheck"
+utafUpdateVDIPool = "utaf-service/updateVDIPool"
+utafGetTestSuiteAbortStatus = "utaf-service/getTestsuiteAbortStatus"
+utafGetTestCaseAbortStatus = "utaf-service/getTestcaseAbortStatus"
+utafSetUTAFVersion = "utaf-service/setUTAFVersion"
+UTAF_API_FL = "\UTAFAPIs.qfl"
+UTAF_LIB_VERSION = "4.0.2" '<---updated 23-May-2024
+reportSep = "utafsplit"
+
+'Jira details
+jiraRestAPIEndPoint = "https://jira-n3.int.corp:8443" 'PROD
+jiraRestAPIGetTestID_01 = "/rest/raven/1.0/api/testrun?testExecIssueKey=" 'Add Test Execution ID e.g. E2ET-56078
+jiraRestAPIGetTestID_02 = "&testIssueKey=" 'Add Test Case ID e.g. E2ET-56051 - returns Jira ID
+jiraRestAPIUpdateTCStatus_01 = "/rest/raven/2.0/api/testrun/" 'Add Jira ID of TC e.g. 83673
+jiraRestAPIUpdateTCStatus_02 = "/status?status=" 'Add status to be updated e.g. PASS, FAIL, etc.
+
+Public utafFWTCError, utafFWTCName, utafFWTCID, utafFWTSID, utafFWTSEID, utafFWTCGroup, utafFWTCStatus, utafFWENV, utafFWComment, utafLogger, utafAbortFlag, utafTCAbortFlag, utafResponseFlag, utafJiraBase64Encode, utafJiraTEID, utafJiraTCID, utafJiraGetTCIDResponse, utafJiraID, utafTPID, utafTPGetTCIDResponse, utafTPTEID, utafTPTCID
+utafFWTSApp = ""
+utafFWTCLanguage = ""
+utafStepFlag = false
+utafFWTCSequence = ""
+utafFWTCSession = ""
+utafFWTCDefect = ""
+utafFPlatform = ""
+utafFWTCReference = ""
+utafFWImplicitWait = 10
+utafFWExplicitWait = 30
+utafFWDocReadyTimeout = 30
+utafCurrActionRun = " is running"
+utafCurrActionDone = " is done"
+
+'Jira TC Statuses
+jiraPass = "PASS"
+jiraExecuting = "EXECUTING"
+jiraFail = "FAIL"
+jiraAbort = "ABORTED"
+jiraDefer = "DEFERRED"
+jiraTodo = "TODO"
+jiraNA = "N/A"
+jiraBlocked = "BLOCKED"
+
+'Proxy Details
+userProxy = "http://userproxy.bgc.net:8080"
+
+'Targetprocess Details
+tpEndpoint = "https://pxs.tpondemand.com"
+tpTestCase = "/api/v2/TestCases/" 'Add Test Case ID after this e.g. 751239?
+tpQuery_01 = "select={TestCaseRuns.where(testplanrun.id=="
+tpQuery_02 = ").select({id,name})}&"
+'Gives TC Run ID e.g. : https://pxsuat.tpondemand.com/api/v2/TestCases/751239?select={TestCaseRuns.where(testplanrun.id==751274).select({id,name})}&access_token=MjA0MjU6SzdKU00wTkQvUWNXZ05yU1d5TTZGUmNkL1VjSnVwT0Z6eG52aEZSYW1SOD0=
+tpAccessToken = "access_token=MjIyODA6aFNiNWZWSzExVFc0OUtqZlQ2Z3RTNTFUK2x2M0RMa2FPbGdqWDNEMmtObz0="
+tpTestCaseRun = "/api/v1/TestCaseRuns/" 'append Test Case Run ID e.g. 3498?
+'To Update Test Case Status e.g. : https://pxsuat.tpondemand.com/api/v1/TestCaseRuns/3948?access_token=MjA0MjU6SzdKU00wTkQvUWNXZ05yU1d5TTZGUmNkL1VjSnVwT0Z6eG52aEZSYW1SOD0=
+'Comment Format : TCE {TCE ID) Updated via UTAF to TP Interface by {user per id} under workspace {workspace name)
+'Example : TCE 11234 Updated via UTAF to TP Interface by id876789 under workspace UTAFTESTNEW
+'TCE ID from the tpTEID, per ID is machine user, workspace is UTAF_SUITE_NAME
+
+'TP TC Statuses
+tpPass = "passed"
+tpExecuting = "onhold"
+tpBlocked = "blocked"
+tpFailed = "failed"

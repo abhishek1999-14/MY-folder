@@ -1,0 +1,307 @@
+Public Function UTAF_Core()
+	Dim tempCount
+	'dbPath = dbPath&"\"&UTAF_SUITE_NAME '<- UAT
+	dbPath = dbPath&UTAF_SUITE_NAME
+	Call readDBFolder(dbPath)
+	If dbFile <> "" Then	
+	Call readDBFile(dbFile)
+	dbCounter = dbCollect.Count
+	Call dbReadTests(1)
+	Call createLogger()
+	printLog dbCounter&" TCs to be executed..."
+	Call apiVDIHealthCheck()
+	Call apiUpdateVDI("N")
+	Call apiUTAFVersion()
+	For DBIterator = 1 To dbCounter Step 1
+		tempCount = DBIterator
+		Call dbReadTests(tempCount)
+		printLog utafFWTCName&" - "&utafFWTCID&" - "&utafFWTSID&" - "&utafFWTSEID&" - "&utafFWENV
+		Call apiTestSuiteAbort()
+		If utafAbortFlag = "false" Then
+			tcrowCount = DataTable.GetSheet("TestCases").GetRowCount
+			tcColsCount = DataTable.GetSheet("TestCases").GetParameterCount
+			printLog "No. of TCs :"&tcrowCount
+			printLog tcColsCount&" Column"
+			statusFlag = "NEW"
+			'Test Case Iteration
+			For TSIterator = 1 To tcrowCount Step 1
+				Call apiTestSuiteAbort()
+				'Test Suite Abort Check - TC Level
+				If utafAbortFlag = "false" Then
+					Call apiTestCaseAbort()
+					'Test Case Abort Check - TC Level
+					If utafTCAbortFlag = "false" Then
+						DataTable.SetCurrentRow(TSIterator)
+						currTestCaseId = DataTable.Value("Sr.No.","TestCases")
+						currTestCaseName = DataTable.Value("TestCase","TestCases")
+						currTestCaseFlag = DataTable.Value("Flag","TestCases")
+						currTestSuiteName = DataTable.Value("TestSuite","TestCases")
+						Dim currTestCaseStartRow,currTestCaseStepCount,currTestCaseSuite
+						currTestCaseSuite = DataTable.Value("TestSuite","TestCases")
+						If currTestCaseName = utafFWTCName Then
+							printLog "========================================================================================================"
+							printLog "Test Suite : "&currTestSuiteName&" | "&"Test Case Name : "&currTestCaseName
+							printLog "========================================================================================================"
+							'Call apiUpdateTestSuiteExecution()
+							Call apiUpdateTestcaseParam("IN PROGRESS")
+							Call apiUpdateVDIPool("N", utafCurrActionRun)
+							StartTime = Now
+							startDate = Time
+							startTimer = Timer
+							currTestCaseStartRow = CInt(DataTable.Value("StartRow","TestCases"))
+							val = DataTable.RawValue("StepCount","TestCases")
+							val = Replace(val,"[]","")
+							DataTable.Value("StepCount","TestCases") = val
+							currTestCaseStepCount = CInt(DataTable.Value("StepCount","TestCases"))
+							ReDim currTestCaseIP(30) 'Array Declaration
+							For tcIPIterator = 9 To tcColsCount Step 1
+								currTestCaseIP(tcIPIterator-9) = DataTable.Value("TCIP_"&tcIPIterator-8,"TestCases")
+							Next
+							Set testSheet = DataTable.GetSheet("TestSteps")
+							Set bpcSheet= DataTable.GetSheet("BPCs")
+							Dim testSheetRowCount,testSheetColCount
+							testSheetRowCount = testSheet.GetRowCount
+							testSheetColCount = testSheet.GetParameterCount
+							'Test Step Iteration
+							For TSSheetIterator = currTestCaseStartRow To (currTestCaseStartRow+currTestCaseStepCount)-1 Step 1
+								Call apiTestSuiteAbort()
+								'Test Suite Abort Check - Step Level
+								If utafAbortFlag = "false" Then
+									Call apiTestCaseAbort()
+									'Test Case Abort Check - Step Level
+									If utafTCAbortFlag = "false" Then
+									DataTable.SetCurrentRow(TSSheetIterator-1)
+									currTestStepType = DataTable.Value("Type","TestSteps")
+									currTestStepUDF = DataTable.Value("StepName","TestSteps")
+									currTestStepDescription = DataTable.Value("StepDescription","TestSteps")
+									tempVar = DataTable.Value("Report_Needed","TestSteps")
+									tempVal = Split(tempVar, ",")
+									currTestStepReport = tempVal(0)
+									currTestStepScreenshot = tempVal(1)
+									currTestStepExec = DataTable.Value("StepToBeExecuted","TestSteps")
+									printLog "Step Description : "&currTestStepDescription
+									printLog "========================================================================================================"
+									printLog "Step Function : "&currTestStepUDF&" | Flag : "&currTestStepExec
+									printLog "========================================================================================================"
+									printLog "Report : "&currTestStepReport&" | Screenshot : "&currTestStepScreenshot
+									printLog "========================================================================================================"
+									ReDim currTestStepIP(15)
+									
+									'Test Step Input Iterator
+									For tsSIPIterator = testStepInputStart To testSheetColCount Step 1
+										If DataTable.Value("TSIP_"&tsSIPIterator-7,"TestSteps") = "" Then
+											printLog TSSheetIterator
+											printLog tsSIPIterator
+											printLog testStepInputStart
+											Exit for
+										Else
+											currTestStepIP(tsSIPIterator-testStepInputStart) = DataTable.Value("TSIP_"&tsSIPIterator-7,"TestSteps")
+											Dim currTestStepInput 
+											currTestStepInput = currTestStepIP(tsSIPIterator-testStepInputStart)
+											'msgbox currTestStepInput
+											If Instr(currTestStepInput,"::") Then
+												'printLog "in if"
+												Dim value , splitvalue,temp
+												value = split(currTestStepIP(tsSIPIterator-testStepInputStart),"::") 
+												temp = value(1)
+												splitvalue = split(temp,"_")
+												Select Case splitvalue(0)
+													Case "TCIP"
+														currTestStepIP(tsSIPIterator-testStepInputStart)= currTestCaseIP(splitvalue(1)-1)
+													Case "TEMP"
+														currTestStepIP(tsSIPIterator-testStepInputStart)=tempVariables(splitvalue(1))
+													Case else
+														printLog "-----Invalid Input Variable--------"
+												End Select							
+											Else 
+												'printLog "in else"
+											End If
+										End If
+									Next
+									'BPC Logic
+									If currTestStepType="BPC" and currTestStepExec="Y" Then
+									
+									Call BPC(bpcSheet,currTestCaseIP,currTestStepIP,currTestCaseFlag)
+										Else 
+										If currTestStepExec="Y"  Then
+											printLog "========================================================================================================"
+											printLog "Executing : "&currTestStepDescription&" | Step : "&currTestStepUDF
+											printLog "========================================================================================================"
+											printLog "Step Name is : "&currTestStepDescription
+											printLog "========================================================================================================"
+											Call apiVDIHealthCheck()
+											Call resuableFunctionBridge(currTestCaseId,currTestCaseName,currTestStepUDF,currTestStepIP)
+											Call apiVDIHealthCheck()
+											printLog "Report : "&currTestStepReport&" | Screenshot : "&currTestStepScreenshot
+											printLog "========================================================================================================"
+											printLog "Test Step Status is : "&statusFlag
+											If statusFlag = "FAIL" and currTestStepReport="Y" Then
+												printLog "----------------to break after TestSteps --------------"
+												Call LogResult_And_CaptureImage(currTestCaseId,currTestCaseName,currTestStepDescription,statusFlag,"Step failed",currTestStepScreenshot)
+												Exit For
+											ElseIf statusFlag = "PASS" and currTestStepReport="Y" Then
+												Call LogResult_And_CaptureImage(currTestCaseId,currTestCaseName,currTestStepDescription,statusFlag,"Passed Step",currTestStepScreenshot)
+											ElseIf statusFlag = "FAIL" and currTestStepReport="N" Then
+												printLog "Report marked as N"
+												Exit For
+											ElseIf statusFlag = "PASS" and currTestStepReport="N" Then
+												printLog "Report marked as N"
+											End If
+										End If					
+									Erase currTestStepIP
+									End If
+								ElseIf utafTCAbortFlag = "true" Then
+									printLog "Test Case is aborted!"
+									Exit For
+								End If
+							ElseIf utafAbortFlag = "true" Then
+								printLog "Test Execution is aborted!"
+								Exit For
+							End If
+							Next
+							EndTime=Now
+							endDate = Time
+							endTimer = Timer
+							printLog StartTime
+							'printLog EndTime&" | "&endDate&" | "&endTimer
+							If utafTCAbortFlag = "false" Then
+								If Ucase(statusFlag) = "FAIL" then
+									Call WriteResultsInExcel(currTestCaseId,currTestCaseName,currTestSuiteName,Ucase(statusFlag),"TC Failed",startDate,endDate)
+									Call apiUpdateTestcaseParam(statusFlag)
+									'Call apiUpdateTestSuiteExecution()
+									Call apiVDIHealthCheck()
+									Call apiUpdateVDIPool("N", utafCurrActionDone)
+									'statusFlag = "NEW"
+								ElseIf Ucase(statusFlag) = "PASS" then
+									Call WriteResultsInExcel(currTestCaseId,currTestCaseName,currTestSuiteName,Ucase(statusFlag),"TC Passed",startDate,endDate)
+									Call apiUpdateTestcaseParam(statusFlag)
+									'Call apiUpdateTestSuiteExecution()
+									Call apiVDIHealthCheck()
+									Call apiUpdateVDIPool("N", utafCurrActionDone)
+									'statusFlag = "NEW"
+								End If
+							End If
+						ElseIf TSIterator=tcrowCount AND statusFlag="NEW" Then
+							print "Current Status : "&statusFlag
+							If statusFlag <> "PASS" Then
+								If statusFlag <> "FAIL" Then
+									statusFlag = "SKIP"
+									startDate = Time
+									endDate = Time
+									utafFWComment = "Test not found in UTAF Sheet"
+									printLog "TC not Found in UTAF Sheet : "&utafFWTCName
+									Call WriteResultsInExcel("NA",utafFWTCName,utafFWTCGroup,statusFlag&"PED","TC not found",startDate,endDate)
+									Call LogResult_And_CaptureImage(utafFWTCID,utafFWTCName,utafFWTCName&" not found in UTAF Sheet",statusFlag,"TC not found","N")
+									'Call writeReportToFile(utafFWTCID,utafFWTCName&" not found in UTAF Sheet",statusFlag,"TC not found","")
+									Call apiUpdateTestcaseParam(statusFlag)
+									'Call apiUpdateTestSuiteExecution()
+									Call apiVDIHealthCheck()
+									Call apiUpdateVDIPool("N", utafCurrActionDone)
+								End If
+							End If
+						End If
+					ElseIf utafTCAbortFlag = "true" Then
+						printLog "Test Case is aborted!"
+						Exit For
+					End If
+					'End of TC Abort Condition
+				ElseIf utafAbortFlag = "true" Then
+					printLog "Test Execution is aborted!"
+					Exit For
+				End If
+				'End of TS Abort Condition
+			Next
+			'Else
+				'printLog "Test Suite not available in the config"
+			ElseIf utafAbortFlag = "true" Then
+				printLog "Test Execution is aborted!"
+				Exit For
+		End If
+	Next
+'Next
+Else 
+	printLog "No new Test Suite available for execution"
+	'Call apiUpdateTestSuiteExecution()
+	'Call apiUpdateTestSuiteExecution()
+	Call apiVDIHealthCheck()
+End If
+Call apiUpdateVDI("Y")
+Call apiUpdateVDIPool("Y", "")
+'Call apiUpdateTestSuiteExecution()
+'Call startIEHeadless(utafRestAPIEndPoint & utafRestAPIUpdateTestSuiteExecutionNew &"/"&utafFWTSEID&"/"&utafFWTCID)
+'Call closeApp("IE")
+End Function
+
+Public Function BPC(bpcSheet,currTestCaseIP,currTestStepIP,currTestCaseFlag)
+	Dim tsBPCrowCount
+        currTestStepName  = DataTable.Value("StepName","TestSteps")
+        tsBPCrowCount = DataTable.GetSheet("BPCs").GetRowCount
+        
+        For TCBPCIterator = 1 To tsBPCrowCount Step 1
+            DataTable.SetCurrentRow(TCBPCIterator)
+            currBPCName = DataTable.Value("BPCName","BPCs")
+            currTestBPCName = DataTable.Value("BPCName","BPCs")
+		currTestStepUDF = DataTable.Value("StepName","BPCs")
+			
+            If currTestCaseFlag = "Y" and  currBPCName = currTestStepName Then						
+                currBPCTestStepType = DataTable.Value("Type","BPCs")
+                currBPCTestStepUDF = DataTable.Value("StepName","BPCs")
+                currBPCTestStepDescription = DataTable.Value("StepDescription","BPCs")
+                tempVar = DataTable.Value("Report_Needed","BPCs")
+	          tempVal = Split(tempVar, ",")
+	         currBPCTestStepReport = tempVal(0)
+                currBPCTestStepExec = DataTable.Value("StepToBeExecuted","BPCs")
+                print "**********************************"                       
+                ReDim currBPCTestStepIP(10)
+                bpcTestSheetColCount = bpcSheet.Count
+                For bpcIPIterator = testStepInputStart To bpcTestSheetColCount Step 1
+                	If DataTable.Value("BPCIP_"&bpcIPIterator-7,"BPCs") <> "" Then
+                		Dim currBpcTestStepInput
+                		currBpcTestStepInput=DataTable.Value("BPCIP_"&bpcIPIterator-7,"BPCs")
+                		currBPCTestStepIP(bpcIPIterator - testStepInputStart) = currBpcTestStepInput
+                    	If  Instr(currBpcTestStepInput,"::") Then
+                           	 Dim bpcvalue,bpcsplitvalue,bpctemp
+                           	 bpcvalue = split(currBpcTestStepInput,"::") 
+                           	 bpctemp = bpcvalue(1)
+                            bpcsplitvalue = split(bpctemp,"_")
+                           	 Select Case bpcsplitvalue(0)
+                               	 Case "TCIP"
+                                    	currBPCTestStepIP(bpcIPIterator-testStepInputStart) = currTestCaseIP(bpcsplitvalue(1)-1)
+                              	  Case "TSIP"
+						currBPCTestStepIP(bpcIPIterator-testStepInputStart) = currTestStepIP(bpcsplitvalue(1)-1)						
+                             	   Case "TEMP"
+                                   	 currBPCTestStepIP(tsSIPIterator-testStepInputStart)=tempVariables(splitvalue(1))
+                                	Case else
+                                   	 print "-----Invalid Input Variable--------"
+                            	End Select						
+                    	End If
+                    End  If 
+            	Next
+                    If currBPCTestStepExec = "Y" Then
+                        printLog "========================================================================================================"
+				printLog "Executing BPC : "&currBPCTestStepDescription&" | Step : "&currTestStepUDF
+						printLog "========================================================================================================"
+						printLog "Step Name is : "&currBPCTestStepDescription
+						printLog "========================================================================================================"
+						'Call apiVDIHealthCheck()
+                        			'Call resuableFunctionBridge(currTestCaseId,currTestCaseName,currBPCTestStepUDF,currBPCTestStepIP)
+                        			Call resuableFunctionBridge(currTestCaseId,currTestCaseName,currTestStepUDF,currBPCTestStepIP)
+						'Call apiVDIHealthCheck()
+                       			 print "Report : "&currTestStepReport&" | Screenshot : "&currTestStepScreenshot
+						print "========================================================================================================"
+						print "Test Case Status is : "&statusFlag
+                        			print " --------after resubale function-------------"
+                       			 print "**********************************"
+						If statusFlag = "FAIL" and currBPCTestStepReport="Y" Then
+                      	  			print "----------------to break after BPC --------------"
+                         				 Call LogResult_And_CaptureImage(currTestCaseId,currTestBPCName,currBPCTestStepDescription,statusFlag,"BPC failed",currTestStepScreenshot)
+                          				Exit for 
+						ElseIf statusFlag = "PASS" and currBPCTestStepReport="Y" Then
+							Call LogResult_And_CaptureImage(currTestCaseId,currTestBPCName,currBPCTestStepDescription,statusFlag,"Passed Step",currTestStepScreenshot)	
+						End If
+                    End  If
+                    Erase currBPCTestStepIP
+            End If  
+      	Next  
+	 
+End Function

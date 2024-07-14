@@ -1,0 +1,920 @@
+'UTAF API Interactions
+Public dbCollect, dbObject, wshNetwork, strComputerName, keyCount, keyArray
+Set objArgs = CreateObject("scripting.FileSystemObject")
+Set wshNetwork = CreateObject( "WScript.Network" )
+strComputerName = wshNetwork.ComputerName
+strUser = wshNetwork.UserName
+
+ Function postAndPutAPI(endPoint, strJSONToSend, reqMethod)
+  	set HTTP = CreateObject("MSXML2.ServerXMLHTTP")
+  	'HTTP.setOption SXH_OPTION_IGNORE_SERVER_SSL_CERT_ERROR_FLAGS ' Ignore SSL errors
+	HTTP.Open reqMethod, endPoint, False
+	HTTP.setRequestHeader "Content-Type","application/json"
+	HTTP.setRequestHeader "Accept","application/json"
+	'New Auth headers
+	'user_Id--> Set as per user logged in (fetch from system)
+	HTTP.setRequestHeader "user_Id", strUser
+	'Authorization--> password (user to set in UTAFConfig)
+	HTTP.setRequestHeader "Authorization", API_UTAF_PASS
+	'user_profile--> UTAF Profile (user to set in UTAFConfig)
+	HTTP.setRequestHeader "user_profile", API_UTAF_PROFILE
+	'Send Request
+	HTTP.send strJSONToSend
+	response = HTTP.responseTexT
+	
+	'Set fso = CreateObject("Scripting.FileSystemObject")
+	'Set outFile = fso.CreateTextFile(UTAF_PROJECT_PATH&"\Reports\output.txt", True)
+	
+	  If HTTP.Status >= 400 And HTTP.Status <= 599 Then
+	    printLog "Error Occurred : " & HTTP.status & " - " & HTTP.statusText
+	    ffPostJSON = false
+	  Else
+	   'outFile.WriteLine(response)
+	   'printLog response
+	   'printLog "Success : " & HTTP.status & " - " & HTTP.ResponseText
+	   ffPostJSON = true
+	  End If
+  
+ End Function
+ 
+ Function putAPIJira(endPoint)
+  	set HTTP = CreateObject("MSXML2.ServerXMLHTTP")
+	HTTP.Open "PUT", endPoint, False
+	
+	'Jira Auth 
+	HTTP.setRequestHeader "Authorization", "Basic "&utafJiraBase64Encode
+	'Send Request
+	HTTP.send
+	response = HTTP.responseTexT
+	
+	'Set fso = CreateObject("Scripting.FileSystemObject")
+	'Set outFile = fso.CreateTextFile(UTAF_PROJECT_PATH&"\Reports\output.txt", True)
+	
+	  If HTTP.Status >= 400 And HTTP.Status <= 599 Then
+	    printLog "Error Occurred : " & HTTP.status & " - " & HTTP.statusText
+	    ffPostJSON = false
+	  Else
+	   'outFile.WriteLine(response)
+	   print response
+	   'printLog "Success : " & HTTP.status & " - " & HTTP.ResponseText
+	   ffPostJSON = true
+	  End If
+  
+ End Function
+ 
+ Function getAPI(endPoint)
+ 	set HTTP = CreateObject("Microsoft.XMLHTTP")
+	HTTP.Open "GET", endPoint, False
+	HTTP.setRequestHeader "Content-Type","application/json"
+	HTTP.setRequestHeader "Accept","application/json"
+	'New Auth headers
+	'user_Id--> Set as per user logged in (fetch from system)
+	HTTP.setRequestHeader "user_Id", strUser
+	'Authorization--> password (user to set in UTAFConfig)
+	HTTP.setRequestHeader "Authorization", API_UTAF_PASS
+	'user_profile--> UTAF Profile (user to set in UTAFConfig)
+	HTTP.setRequestHeader "user_profile", API_UTAF_PROFILE
+	'Send Request
+	HTTP.send
+	utafAbortFlag = ""
+	response = ""
+	response = HTTP.responseTexT
+	utafAbortFlag = response
+	'Set fso = CreateObject("Scripting.FileSystemObject")
+	'Set outFile = fso.CreateTextFile(UTAF_PROJECT_PATH&"\Reports\output.txt", True)
+	
+	  If HTTP.Status >= 400 And HTTP.Status <= 599 Then
+	    printLog "Error Occurred : " & HTTP.status & " - " & HTTP.statusText
+	    ffPostJSON = false
+	  Else
+	   'outFile.WriteLine(response)
+	   'printLog response
+	   'printLog "Success : " & HTTP.status & " - " & HTTP.ResponseText
+	   ffPostJSON = true
+	  End If
+ End Function
+
+Function getAPIJira(endPoint)
+ 	set HTTP = CreateObject("MSXML2.ServerXMLHTTP")
+	HTTP.Open "GET", endPoint, False ', jiraUser, jiraPassword
+	'Jira Auth 
+	HTTP.setRequestHeader "Authorization", "Basic "&utafJiraBase64Encode
+	HTTP.send
+	HTTP.waitForResponse
+	response = HTTP.responseTexT
+	'Set fso = CreateObject("Scripting.FileSystemObject")
+	'Set outFile = fso.CreateTextFile(UTAF_PROJECT_PATH&"\Reports\output.txt", True)
+	
+	  If HTTP.Status >= 400 And HTTP.Status <= 599 Then
+	    printLog "Error Occurred : " & HTTP.status & " - " & HTTP.statusText
+	    ffPostJSON = false
+	  Else
+	   'outFile.WriteLine(response)
+	   'print response
+	   utafJiraGetTCIDResponse = response
+	   'printLog "Success : " & HTTP.status & " - " & HTTP.ResponseText
+	   ffPostJSON = true
+	  End If
+ End Function
+ 
+ Function getAPITP(endPoint)
+ 	set HTTP = CreateObject("WinHttp.WinHttpRequest.5.1")
+ 	HTTP.SetProxy 2, userProxy
+	HTTP.Open "GET", endPoint, False
+	HTTP.send
+	HTTP.waitForResponse
+	response = HTTP.responseTexT
+	'Set fso = CreateObject("Scripting.FileSystemObject")
+	'Set outFile = fso.CreateTextFile(UTAF_PROJECT_PATH&"\Reports\output.txt", True)
+	
+	  If HTTP.Status >= 400 And HTTP.Status <= 599 Then
+	    printLog "Error Occurred : " & HTTP.status & " - " & HTTP.statusText
+	    ffPostJSON = false
+	  Else
+	   'outFile.WriteLine(response)
+	   'print response
+	   utafTPGetTCIDResponse = response
+	   'print utafTPGetTCIDResponse
+	   'printLog "Success : " & HTTP.status & " - " & HTTP.ResponseText
+	   ffPostJSON = true
+	  End If
+ End Function
+ 
+ Function postAPITP(endPoint, strJSONToSend, reqMethod)
+ 	Set HTTP = CreateObject("WinHttp.WinHttpRequest.5.1")
+	' Set the proxy settings
+	HTTP.SetProxy 2, userProxy
+	' Open the request and set headers
+	HTTP.Open reqMethod, endPoint, False
+	HTTP.setRequestHeader "Content-Type", "application/json"
+	HTTP.setRequestHeader "Accept", "application/json"
+	' Send the request
+	HTTP.Send strJSONToSend
+	' Get the response
+	response = HTTP.ResponseText
+	
+	' Check the status
+	If HTTP.Status >= 400 And HTTP.Status <= 599 Then
+	    printLog "Error Occurred : " & HTTP.Status & " - " & HTTP.StatusText
+	    ffPostJSON = false
+	Else
+	    'outFile.WriteLine(response)
+	    'printLog response
+	    'printLog "Success : " & HTTP.Status & " - " & HTTP.ResponseText
+	    ffPostJSON = true
+	End If
+ End Function
+
+Function getAPINew(endPoint)
+ 	set HTTP = CreateObject("MSXML2.ServerXMLHTTP")
+	HTTP.Open "GET", endPoint, False
+	HTTP.setRequestHeader "Content-Type","application/json"
+	HTTP.setRequestHeader "Accept","application/json"
+	'New Auth headers
+	'user_Id--> Set as per user logged in (fetch from system)
+	HTTP.setRequestHeader "user_Id", strUser
+	'Authorization--> password (user to set in UTAFConfig)
+	HTTP.setRequestHeader "Authorization", API_UTAF_PASS
+	'user_profile--> UTAF Profile (user to set in UTAFConfig)
+	HTTP.setRequestHeader "user_profile", API_UTAF_PROFILE
+	HTTP.send
+	utafResponseFlag = ""
+	response = ""
+	response = HTTP.responseTexT
+	utafResponseFlag = response
+	'Set fso = CreateObject("Scripting.FileSystemObject")
+	'Set outFile = fso.CreateTextFile(UTAF_PROJECT_PATH&"\Reports\output.txt", True)
+	
+	  If HTTP.Status >= 400 And HTTP.Status <= 599 Then
+	    printLog "Error Occurred : " & HTTP.status & " - " & HTTP.statusText
+	    ffPostJSON = false
+	  Else
+	   'outFile.WriteLine(response)
+	   'printLog response
+	   'printLog "Success : " & HTTP.status & " - " & HTTP.ResponseText
+	   ffPostJSON = true
+	  End If
+ End Function
+
+function extractJSONDictionary(strFileName, regexVal)
+	Set objFile = objArgs.OpenTextFile(strFileName,1)
+	res = objFile.ReadAll
+	compareRegexTestCase = compareRegex(res, regexVal)
+	strWithoutSpacesAndNewLine = replaceSpaceAndNewLine(compareRegexTestCase)
+	value1 = split(strWithoutSpacesAndNewLine,"{")
+	value2 = replaceWithNull(value1(1),chr(100))
+	value3 = replaceWithNull(value2,"[")
+	value4 = replaceWithNull(value3,"}")
+	value5 = replace(value4,"],","|",1,-1)
+	value6 = replaceWithNull(value5,"]")
+	value7 = split(value6,"|")
+	printLog ubound(value7)
+	set list = CreateObject("Scripting.Dictionary")
+	For i = 0 To ubound(value7) Step 1
+		printLog value7(i)
+		split1=split(value7(i),":")
+		list.add split1(0),split1(1)
+	Next
+	set extractedJSON = list
+end function
+
+
+Function extractJSONArrayList(strFileName, regexVal)
+	Set objFile = objArgs.OpenTextFile(strFileName,1)
+	res = objFile.ReadAll
+	val = compareRegex(res, regexVal)
+	Dim val1,val2,val3,val4,val5,strWithoutSpaces
+    strWithoutSpaces = replaceSpaceAndNewLine(val)
+	val1= split(strWithoutSpaces,":")
+	val2 = replaceWithNull(val1(1),"[")
+	val3 = replaceWithNull(val2,"]")
+	val4 = replaceWithNull(val3,chr(100))
+	val5 = split(val4,",")
+	set list = CreateObject("System.Collections.ArrayList")
+	For each col in val5	
+		list.add col
+	Next
+	set fetchValuesOfTestSuite = list
+End Function
+
+''=========Test Suite Ends=================
+
+Function compareRegex(jsonFile,regexPattern)
+	Dim value
+	Set oRE = New Regexp
+	oRE.Global = True
+	oRe.Pattern = regexPattern
+	oRE.IgnoreCase = False
+	Set colMatches = oRE.Execute(jsonFile)
+	For Each oMatch In colMatches
+		value = oMatch.Value
+	next
+	compareRegex = value
+End Function
+
+Function replaceSpaceAndNewLine(val)
+	Dim str,str1
+	str =  replaceWithNull(val,vbCrLf)
+	str1 = replaceWithNull(str," ")
+	replaceSpaceAndNewLine = str1
+End Function
+
+Function splitReplaceValues(strWithoutSpaces)
+	
+	splitReplaceValues = val5
+End Function
+
+Function replaceWithNull(str,char)
+	Dim modifiedString
+	modifiedString = Replace(str,char,"",1,-1)
+	replaceWithNull = modifiedString
+End Function
+
+Function readDBSuite (filePath)
+	Set fso = CreateObject("Scripting.FileSystemObject")
+	dirVal = Now()
+	If fso.FileExists(filePath) Then
+		Call readDBFile(filePath)
+		Call dbReturnKey(dbKeyID)
+		dbSuiteName = dbObject
+		printLog "Test Suite fetched from DB : "&dbSuiteName
+	Else 
+		printLog "No File placed on the DB for execution"
+	End If
+	
+End Function
+
+Public Function readDBFile(dbFilePath)
+	Dim oFSO, oTextSteam,value, tempVal
+	Set dbCollect = CreateObject("Scripting.Dictionary")
+	'Set keyArray = CreateObject("System.Collections.ArrayList")
+	'Instantiate the file system object  
+	Set oFSO = CreateObject("Scripting.FileSystemObject")
+	'Below condition will check if the file exist then read else display message as File not found
+	If oFSO.FileExists(dbFilePath) Then
+	'To do operation on text file, open file and assign it to the text steam object    
+		Set oTextSteam = oFSO.OpenTextFile(dbFilePath)
+		i = 0
+	Do until oTextSteam.AtEndOfStream
+	value = split(Trim(oTextSteam.ReadLine()),dbSep)
+	dbCollect.Add cInt (value(0)),value(1)
+	'tempVal = value(0)
+	'keyArray.add cInt (tempVal)
+	'print keyArray(0)
+	Loop
+	oTextSteam.Close
+	Set oTextSteam = Nothing
+	Else
+	print "File Not Found"
+	'Exit For
+	End If
+	'Set the FSO object to nothing to remove reference
+	Set oFSO = Nothing
+	On Error Resume Next
+	Call exceptionHandling
+End Function
+
+Public Function dbReturnKey(key)
+	Dim keyObj
+	keyObj = dbCollect.Item(key)
+	printLog "Key : "&key&" | Value : "&keyObj
+	dbObject = keyObj
+	On Error Resume Next
+	Call exceptionHandling
+End Function
+
+Function createDBTestReportFiles()
+	Dim folderPath
+	folderPath = dbPath&"\"&utafFWTSEID
+	dbReportFile = folderPath&"\"&utafFWTCID&".txt"
+	Set fso = CreateObject("Scripting.FileSystemObject")
+	If fso.FolderExists(folderPath) Then
+	else
+		fso.CreateFolder(folderPath)
+	End If
+	If fso.FileExists(dbReportFile) Then
+		'Set outFile = fso.OpenTextFile(dbReportFile, 2, False)
+	else
+		Set outFile = fso.CreateTextFile(dbReportFile, True)
+	End If
+	'printLog "File created at : "&outFile
+End Function
+
+Function createDBTestReportFolder()
+	Dim folderPath, ssFolderPath
+	folderPath = dbPath&"\"&utafFWTSEID
+	ssFolderPath = dbPath&"\"&utafFWTSEID&"\Screenshots"
+	Set fso = CreateObject("Scripting.FileSystemObject")
+	If fso.FolderExists(folderPath) Then
+	else
+		fso.CreateFolder(folderPath)
+	End If
+	If fso.FolderExists(ssFolderPath) Then
+	else
+		fso.CreateFolder(ssFolderPath)
+	End If
+End Function
+
+Function writeReportToFile(tcID, tcName, tcStatus, tcResult, tcSSPath)
+	call createDBTestReportFiles()
+	Call dateFormat()
+	Dim tcResults, tcNameTemp
+	tcNameTemp = replace(tcName, vbCrLf, " ")
+	tcNameTemp = replace(tcNameTemp, chr(10), " ")
+	tcNameTemp = replace(tcNameTemp, chr(13), " ")
+	tcNameTemp = replace(tcNameTemp, vbNewLine, " ")
+	tcResults = utafFWTCID &reportSep& tcNameTemp &reportSep& tcStatus &reportSep& tcSSPath &reportSep& timeVal
+	printLog tcResults
+	outFile.WriteLine(tcResults)
+End Function
+
+Function dbReadTests(key)
+	Dim keyObj, keyCollect, temp, keyVal, val, keyItr
+	temp = Cstr(key-1)
+	keyVal = dbCollect.Keys
+	'val = Sort(keyVal, "ASC")
+	val = bubbleSort(keyVal)
+	'val = bubbleSort(keyArray)
+	keyItr = val(temp)
+	keyObj = dbCollect.Item(keyItr)
+	'printLog "Key : "&keyItr&" | Value : "&keyObj
+	Set keyCollect = CreateObject("Scripting.Dictionary")
+	value = split(Trim(keyObj),dbTCSep)
+	utafFWTCName = value(3)
+	utafFWENV = value(2)
+	utafFWTCID = value(0)
+	utafFWTSID = value(5)
+	utafFWTSEID = value(6)
+	utafFWTCGroup = value(7)
+	If jiraFlag = "Y" Then
+		Call Base64Encode(jiraUser&":"&jiraPassword)
+		utafJiraTEID = value(11)
+		utafJiraTCID = value(10)
+		print "Jira Test Execution ID : "&utafJiraTEID&" | Jira Test Case ID : "&utafJiraTCID
+		Call getTCJiraID(utafJiraTEID, utafJiraTCID)
+	End If
+	If tpFlag = "Y" Then
+		utafTPTEID = value(11)
+		utafTPTCID = value(10)
+		print "TP Test Run ID : "&utafTPTEID&" | TP Test Case ID : "&utafTPTCID
+		Call getTPRunID(utafTPTEID, utafTPTCID)
+	End If
+	'print utafFWTCName&" - "&utafFWTCID&" - "&utafFWTSID&" - "&utafFWTSEID&" - "&utafFWENV
+End Function
+
+Function apiGetTestCaseForExecution(tceStatus)
+	Dim payload
+	payload = "{ ""tceStatus"" : """&tceStatus&""", ""tceMachine"" : """&strComputerName&""" }"
+	'printLog payload
+	Call postAndPutAPI(utafRestAPIEndPoint & utafRestAPIGetTestCaseForExecution, payload, "POST")
+End Function
+
+Function apiUpdateTestcaseParam(status)
+	Dim payload, statusVal
+	statusVal = status
+	Call dateFormat()
+	If statusVal = "IN PROGRESS" Then
+		utafFWComment = "In Progress"
+		payload = "{ ""tceStatus"" : """&statusVal&""", ""tceStartTime"": """&timeVal&""", ""tceId"" : """&utafFWTCID&""", ""tceComment"" : """&utafFWComment&""" }"
+		If jiraFlag = "Y" Then
+			Call apiTestCaseAbort()
+			If utafTCAbortFlag = "false" Then	
+				Call updateTCStatusInJira(jiraExecuting)
+				print "Status updated in Jira for TC ID "&utafJiraTCID&" as "&jiraExecuting
+			ElseIf utafTCAbortFlag = "true" Then
+				Call updateTCStatusInJira(jiraAbort)
+				print "Status updated in Jira for TC ID "&utafJiraTCID&" as "&jiraAbort
+			End If
+		End If
+		If tpFlag = "Y" Then
+			Call apiTestCaseAbort()
+			If utafTCAbortFlag = "false" Then	
+				Call updateTCStatusInTP(tpExecuting)
+				print "Status updated in Targetprocess for TC ID "&utafTPTCID&" as "&tpExecuting
+			ElseIf utafTCAbortFlag = "true" Then
+				Call updateTCStatusInTP(tpBlocked)
+				print "Status updated in Targetprocess for TC ID "&utafTPTCID&" as "&tpBlocked
+			End If
+		End If
+	End If
+	If statusVal = "PASS" OR statusVal = "FAIL" Then
+		statusVal = statusVal&"ED"
+		If utafFWComment = "" OR utafFWComment = "In Progress" Then
+			utafFWComment = "Test Executed"
+		End If
+		payload = "{ ""tceStatus"" : """&statusVal&""", ""tceId"" : """&utafFWTCID&""", ""tceComment"" : """&utafFWComment&""" }"
+		If jiraFlag = "Y" Then
+			Call apiTestCaseAbort()
+			If statusVal = "PASSED" Then
+				If utafTCAbortFlag = "false" Then
+					Call updateTCStatusInJira(jiraPass)
+					print "Status updated in Jira for TC ID "&utafJiraTCID&" as "&jiraPass
+				ElseIf utafTCAbortFlag = "true" Then
+					Call updateTCStatusInJira(jiraAbort)
+					print "Status updated in Jira for TC ID "&utafJiraTCID&" as "&jiraAbort
+				End If
+			ElseIf statusVal = "FAILED" Then
+				If utafTCAbortFlag = "false" Then
+					Call updateTCStatusInJira(jiraFail)
+					print "Status updated in Jira for TC ID "&utafJiraTCID&" as "&jiraFail
+				ElseIf utafTCAbortFlag = "true" Then
+					Call updateTCStatusInJira(jiraAbort)
+					print "Status updated in Jira for TC ID "&utafJiraTCID&" as "&jiraAbort
+				End If
+			End If
+		End If
+		
+		If tpFlag = "Y" Then
+			Call apiTestCaseAbort()
+			If statusVal = "PASSED" Then
+				If utafTCAbortFlag = "false" Then
+					Call updateTCStatusInTP(tpPass)
+					print "Status updated in Targetprocess for TC ID "&utafTPTCID&" as "&tpPass
+				ElseIf utafTCAbortFlag = "true" Then
+					Call updateTCStatusInTP(tpBlocked)
+					print "Status updated in Targetprocess for TC ID "&utafTPTCID&" as "&tpBlocked
+				End If
+			ElseIf statusVal = "FAILED" Then
+				If utafTCAbortFlag = "false" Then
+					Call updateTCStatusInTP(tpFailed)
+					print "Status updated in Targetprocess for TC ID "&utafTPTCID&" as "&tpFailed
+				ElseIf utafTCAbortFlag = "true" Then
+					Call updateTCStatusInTP(tpBlocked)
+					print "Status updated in Targetprocess for TC ID "&utafTPTCID&" as "&tpBlocked
+				End If
+			End If
+		End If
+		
+	End If
+	If statusVal = "SKIP" Then
+		statusVal = statusVal&"PED"
+		If utafFWComment = "" OR utafFWComment = "In Progress" Then
+			utafFWComment = "Test not found in UTAF Sheet"
+		End If
+		payload = "{ ""tceStatus"" : """&statusVal&""", ""tceStartTime"": """&timeVal&""", ""tceModifiedTime"": """&timeVal&""", ""tceId"" : """&utafFWTCID&""", ""tceComment"" : """&utafFWComment&""" }"
+		If jiraFlag = "Y" Then
+			Call updateTCStatusInJira(jiraTodo)
+			print "Status updated in Jira for TC ID "&utafJiraTCID&" as "&jiraTodo
+		End If
+	End If
+	'printLog payload
+	Call postAndPutAPI(utafRestAPIEndPoint & utafRestAPIUpdateTestcaseParam, payload, "PUT")
+	printLog "TC status & comment updated..."
+End Function
+
+Function apiUpdateVDI(flag)
+	Dim payload
+	payload = "{ ""vdiname"": """&strComputerName&""", ""vdiavailable"" : """&flag&""" }"
+	'printLog payload
+	Call postAndPutAPI(utafRestAPIEndPoint & utafUpdateVDI, payload, "POST")
+	printLog "VDI Availability Set : "&flag
+End Function
+
+Function apiUpdateTestSuiteExecution()
+	Dim resURL
+	resURL = utafRestAPIEndPoint & utafRestAPIUpdateTestSuiteExecutionNew &"/"&utafFWTSEID&"/"&utafFWTCID
+	printLog resURL
+	Call getAPINew(resURL)
+	printLog "Execution of Suite ID "&utafFWTSEID&" updated..."
+End Function
+
+Function apiUpdateTestSuiteExecutionNew()
+	
+End Function
+
+Function apiCheckFailedTestcase()
+	
+End Function
+
+Function apiVDIHealthCheck()
+	Dim payload
+	payload = "{ ""vdiName"" : """&strComputerName&""",  ""vdiRunningstatus"" : ""UP""}"
+	'printLog payload
+	Call postAndPutAPI(utafRestAPIEndPoint & utafVDIHealthCheck, payload, "POST")
+	printLog "Machine "&strComputerName&" is up & running"
+End Function
+
+Function apiUpdateVDIPool(flag, currAction)
+	Dim payload
+	If flag = "Y" Then
+		payload = "{ ""vdiName"" : """&strComputerName&""", ""vdiCurrAction"" : ""NA"", ""tseid"" : ""0"", ""vdiAvailable"" : """&flag&"""}"
+	else
+		payload = "{ ""vdiName"" : """&strComputerName&""", ""vdiCurrAction"" : """&currTestCaseId&currAction&""", ""tseid"" : """&utafFWTSEID&""", ""vdiAvailable"" : """&flag&"""}"
+	End If
+	printLog payload
+	Call postAndPutAPI(utafRestAPIEndPoint & utafUpdateVDIPool, payload, "POST")
+	printLog "Execution is updated..."
+End Function
+
+Function apiTestSuiteAbort()
+	Dim resURL
+	resURL = utafRestAPIEndPoint & utafGetTestSuiteAbortStatus &"/"&utafFWTSEID
+	'resURL = utafRestAPIEndPoint & utafGetTestSuiteAbortStatus &"/"&tsID
+	'printLog resURL
+	Call getAPINew(resURL)
+	utafAbortFlag = utafResponseFlag
+	'printLog "Test Suite Abort flag for TSE ID "&utafFWTSEID&" is "&utafAbortFlag
+	'print "Test Suite Abort flag for "&tsID&" is "&utafAbortFlag
+End Function
+
+'New Function : Added - 18 Jan 2022
+Function apiTestCaseAbort()
+	Dim resURL
+	resURL = utafRestAPIEndPoint & utafGetTestCaseAbortStatus &"/"&utafFWTCID
+	'resURL = utafRestAPIEndPoint & utafGetTestCaseAbortStatus &"/"&tcID
+	Call getAPINew(resURL)
+	utafTCAbortFlag = utafResponseFlag
+	'printLog "Test Case Abort flag for TCE ID "&utafFWTCID&" is "&utafTCAbortFlag
+	'print "Test Case Abort flag for TCE ID "&tcID&" is "&utafTCAbortFlag
+End Function
+
+'New Function : Added - 14 Jul 2022
+Function apiUTAFVersion()
+	Dim payload
+	payload = "{ ""vdiName"" : """&strComputerName&""", ""utafVersion"" : """&UTAF_VERSION&""" }"
+	'printLog payload
+	Call postAndPutAPI(utafRestAPIEndPoint & utafSetUTAFVersion, payload, "POST")
+	printLog "UTAF UFT Library Version on machine "&strComputerName&" is "&UTAF_VERSION
+End Function
+
+Function readDBFolder(dbFolder)
+	Dim objFolder, colFiles, objStartFolder, tempName, tempVal
+	Set fso = CreateObject("Scripting.FileSystemObject")
+	objStartFolder = dbFolder&"\"&strComputerName
+	Set objFolder = fso.GetFolder(objStartFolder)
+	Set colFiles = objFolder.Files
+	For Each objFile in colFiles
+		dbFileName = objFile.Name
+		'printLog dbFileName
+		value = split(Trim(dbFileName),".")
+		dbAckName = value(0)&".ack"
+		'printLog dbAckName
+		If fso.FileExists(objStartFolder&"\"&dbAckName) Then
+			'printLog "Acknowledgement exists for "&dbFileName
+		else
+			'printLog "No Acknowlegdement exists for "&dbFileName
+			dbFile = objStartFolder&"\"&dbFileName
+			tempVal = split(dbFileName, "_")
+			tempName = tempVal(0)
+			print "Suite picked for execution : "&tempName
+			fso.CreateTextFile(objStartFolder&"\"&dbAckName)
+			print "Acknowledgement generated for the Suite : "&tempName
+			Exit For
+		End If
+	Next
+End Function
+
+Function dateFormat()
+	timeVal = Now
+	'printLog timeVal
+	d = TwoDigits(Day(timeVal))
+    m = TwoDigits(Month(timeVal))    
+    y = Year(timeVal)
+    timeVal = y & "-" & m & "-" & d &" "&time
+    'printLog timeVal
+End Function
+
+Function TwoDigits(num)
+    If(Len(num)=1) Then
+        TwoDigits="0"&num
+    Else
+        TwoDigits=num
+    End If
+End Function
+
+Function replaceMultiple(stringVal)
+	'Dim replaceStrVal
+	replaceStrVal = stringVal
+	replaceStrVal = replace(replaceStrVal, "\", "_")
+	replaceStrVal = replace(replaceStrVal, "/", "_")
+	replaceStrVal = replace(replaceStrVal, "|", "_")
+	replaceStrVal = replace(replaceStrVal, "?", "_")
+	replaceStrVal = replace(replaceStrVal, "!", "_")
+	replaceStrVal = replace(replaceStrVal, "*", "_")
+	replaceStrVal = replace(replaceStrVal, ":", "_")
+	replaceStrVal = replace(replaceStrVal, "<", "_")
+	replaceStrVal = replace(replaceStrVal, ">", "_")
+	replaceStrVal = replace(replaceStrVal, """", "_")
+	replaceStrVal = replace(replaceStrVal, " ", "_")
+	'printLog replaceStrVal
+	replaceMultiple = replaceStrVal
+End Function
+
+Public Function startIEHeadless(navLink)
+    Dim oIE
+    Set oIE = CreateObject("InternetExplorer.Application")
+    oIE.Visible = False
+    oIE.Navigate2 navLink
+	wait 2
+    Set oIE = Nothing
+End Function
+
+Function printLog(message)
+	print message
+	If logFlag = "Y" Then
+		utafLogger.WriteLine(message)
+	End If
+End Function
+
+Function createLogger()
+If logFlag = "Y" Then
+	Dim logPath, logFso
+	Set logFso = CreateObject("Scripting.FileSystemObject")
+	dirVal = Now()
+	Dim strDate, strTime
+	strDate = Day(dirVal)&"_"&Month(dirVal)&"_"&Year(dirVal)
+	strTime = Hour(dirVal)&"_"&Minute(dirVal)&"_"&second(dirVal)
+	If dbFlag = "Y" Then
+		logPath = dbPath&"\"&utafFWTSEID
+		If logFso.FolderExists(logPath) Then
+		
+		else
+			logFso.CreateFolder(logPath)
+		End If
+		logPath = dbPath&"\"&utafFWTSEID&"\logs"
+		loggerFile = logPath&"\exe_logs_"&strDate&"_"&strTime&".txt"
+	ElseIf dbFlag = "N" Then
+		logPath = UTAF_PROJECT_PATH&"\logs"
+		If logFso.FolderExists(logPath) Then
+		
+		else
+			logFso.CreateFolder(logPath)
+		End If
+		loggerFile = logPath&"\logs_"&strDate&"_"&strTime&".txt"
+	End If
+	If logFso.FolderExists(logPath) Then
+		
+	else
+		logFso.CreateFolder(logPath)
+	End If
+	If logFso.FileExists(loggerFile) Then
+		
+	else
+		Set utafLogger = logFso.CreateTextFile(loggerFile, True)
+	End If
+End If
+End Function
+
+'The merge function.
+Public Function Merge(LeftArray, RightArray, Order)
+    'Declared variables
+    Dim FinalArray
+    Dim FinalArraySize
+    Dim i
+    Dim LArrayPosition
+    Dim RArrayPosition
+
+    'Variable initialization
+    LArrayPosition = 0
+    RArrayPosition = 0
+
+    'Calculate the expected size of the array based on the two smaller arrays.
+    FinalArraySize = UBound(LeftArray) + UBound(RightArray) + 1
+    ReDim FinalArray(FinalArraySize)
+
+    'This should go until we need to exit the function.
+    While True
+
+        'If we are done with all the values in the left array.  Add the rest of the right array
+        'to the final array.
+        If LArrayPosition >= UBound(LeftArray)+1 Then
+            For i=RArrayPosition To UBound(RightArray)
+                FinalArray(LArrayPosition+i) = RightArray(i)
+            Next
+            Merge = FinalArray
+            Exit Function
+
+        'If we are done with all the values in the right array.  Add the rest of the left array
+        'to the final array.
+        ElseIf RArrayPosition >= UBound(RightArray)+1 Then
+            For i=LArrayPosition To UBound(LeftArray)
+                FinalArray(i+RArrayPosition) = LeftArray(i)
+            Next
+            Merge = FinalArray
+            Exit Function
+
+        'For descending, if the current value of the left array is greater than the right array 
+        'then add it to the final array.  The position of the left array will then be incremented
+        'by one.
+        ElseIf LeftArray(LArrayPosition) > RightArray(RArrayPosition) And UCase(Order) = "DESC" Then
+            FinalArray(LArrayPosition+RArrayPosition) = LeftArray(LArrayPosition)
+            LArrayPosition = LArrayPosition + 1
+
+        'For ascending, if the current value of the left array is less than the right array 
+        'then add it to the final array.  The position of the left array will then be incremented
+        'by one.
+        ElseIf LeftArray(LArrayPosition) < RightArray(RArrayPosition) And UCase(Order) = "ASC" Then
+            FinalArray(LArrayPosition+RArrayPosition) = LeftArray(LArrayPosition)
+            LArrayPosition = LArrayPosition + 1
+
+        'For anything else that wasn't covered, add the current value of the right array to the
+        'final array.
+        Else
+            FinalArray(LArrayPosition+RArrayPosition) = RightArray(RArrayPosition)
+            RArrayPosition = RArrayPosition + 1
+        End If
+    Wend
+End Function
+
+'The main sort function.
+Public Function Sort(ArrayToSort, Order)
+    'Variable declaration.
+    Dim i
+    Dim LeftArray
+    Dim Modifier
+    Dim RightArray
+
+    'Check to make sure the order parameter is okay.
+    If Not UCase(Order)="ASC" And Not UCase(Order)="DESC" Then
+        Exit Function
+    End If
+    'If the array is a singleton or 0 then it is sorted.
+    If UBound(ArrayToSort) <= 0 Then
+        Sort = ArrayToSort
+        Exit Function
+    End If
+
+    'Setting up the modifier to help us split the array effectively since the round
+    'functions aren't helpful in VBScript.
+    If UBound(ArrayToSort) Mod 2 = 0 Then
+        Modifier = 1
+    Else
+        Modifier = 0
+    End If
+
+    'Setup the arrays to about half the size of the main array.
+    ReDim LeftArray(Fix(UBound(ArrayToSort)/2))
+    ReDim RightArray(Fix(UBound(ArrayToSort)/2)-Modifier)
+
+    'Add the first half of the values to one array.
+    For i=0 To UBound(LeftArray)
+        LeftArray(i) = ArrayToSort(i)
+    Next
+
+    'Add the other half of the values to the other array.
+    For i=0 To UBound(RightArray)
+        RightArray(i) = ArrayToSort(i+Fix(UBound(ArrayToSort)/2)+1)
+    Next
+
+    'Merge the sorted arrays.
+    Sort = Merge(Sort(LeftArray, Order), Sort(RightArray, Order), Order)
+End Function
+
+Public Function bubbleSort(arr)
+	' Sort Data with Bubble Sort
+	'arr = Array(4, 6, 2, 7, 3, 5, 1, 8, 10, 22, 33, 15, 11, 8, 67, 85)
+	'print arr
+	n = UBound(arr)
+	Do
+	  nn = -1
+	  For j = LBound(arr) to n - 1
+	      If arr(j) > arr(j + 1) Then
+	         TempValue = arr(j + 1)
+	         arr(j + 1) = arr(j)
+	         arr(j) = TempValue
+	         nn = j
+	      End If
+	  Next
+	  n = nn
+	Loop Until nn = -1
+	 
+	Dim s
+	'For i = LBound(arr) To UBound(arr)
+	    's = s & arr(i) & ","
+	    's(i) = arr(i)
+	'Next
+	'print s
+	bubbleSort = arr
+End Function
+
+Public Function getTCJiraID(testExeID, testCaseID)
+	Dim resURL, jiraRes, tempVal
+	Set jiraCollect = CreateObject("Scripting.Dictionary")
+	resURL = jiraRestAPIEndPoint & jiraRestAPIGetTestID_01 & testExeID & jiraRestAPIGetTestID_02 & testCaseID
+	'print resURL
+	Call getAPIJira(resURL)
+	jiraRes = split(Trim(utafJiraGetTCIDResponse),":")
+	jiraCollect.Add jiraRes(0),jiraRes(1)
+	tempVal = split(Trim(jiraCollect.Item("{""id""")),",")
+	utafJiraID = Trim(tempVal(0))
+	'print "JIRA ID for the TC : "&utafJiraID
+End Function
+
+Public Function getTPRunID(testExeID, testCaseID)
+	Dim resURL, tpRes, tempVal
+	resURL = tpEndpoint & tpTestCase & testCaseID &"?"& tpQuery_01 & testExeID & tpQuery_02 & tpAccessToken
+	'print resURL
+	Call getAPITP(resURL)
+	Dim startIdx
+	Dim endIdx
+	'print utafTPGetTCIDResponse
+	startIdx = InStr(utafTPGetTCIDResponse, """id"":") + 5
+	endIdx = InStr(startIdx, utafTPGetTCIDResponse, ",")
+	Dim id
+	utafTPID = CLng(Mid(utafTPGetTCIDResponse, startIdx, endIdx - startIdx))
+	print "TP Run ID : "&utafTPID
+	
+End Function
+
+Public Function updateTCStatusInJira(jiraStatus)
+		Dim resURL
+		resURL = jiraRestAPIEndPoint & jiraRestAPIUpdateTCStatus_01 & utafJiraID & jiraRestAPIUpdateTCStatus_02 & jiraStatus
+		'print resURL
+		Call putAPIJira (resURL)
+End Function
+
+Public Function updateTCStatusInTP(tpStatus)
+		Dim reqURL, reqBody, reqComment
+		'print utafTPID
+		reqURL = tpEndpoint & tpTestCaseRun & utafTPID & "?" & tpAccessToken
+		'print resURL
+		reqComment = "TCE "&utafTPTCID&" Updated via UTAF to TP Interface by "&strUser&" under workspace "&UTAF_SUITE_NAME
+		reqBody = "{""Status"": """&tpStatus&""", ""Comment"": """&reqComment&"""}"
+		'print reqURL
+		'print reqBody
+		Call postAPITP(reqURL, reqBody, "POST")
+End Function
+
+Function Base64Encode(sText)
+ Set oNode = CreateObject("Msxml2.DOMDocument.3.0").CreateElement("base64")
+ oNode.dataType = "bin.base64"
+ oNode.nodeTypedValue =Stream_StringToBinary(sText)
+ Base64Encode = oNode.text
+ utafJiraBase64Encode = Base64Encode
+ Set oNode = Nothing
+End Function
+
+Function Base64Decode(ByVal vCode)
+ Set oNode = CreateObject("Msxml2.DOMDocument.3.0").CreateElement("base64")
+ oNode.dataType = "bin.base64"
+ oNode.text = vCode
+ Base64Decode = Stream_BinaryToString(oNode.nodeTypedValue)
+ Set oNode = Nothing
+End Function
+
+Function Stream_StringToBinary(Text)
+ Set BinaryStream = CreateObject("ADODB.Stream")
+ BinaryStream.Type = 2
+' All Format =>  utf-16le - utf-8 - utf-16le
+ BinaryStream.CharSet = "us-ascii"
+ BinaryStream.Open
+ BinaryStream.WriteText Text
+ BinaryStream.Position = 0
+ BinaryStream.Type = 1
+ BinaryStream.Position = 0
+ Stream_StringToBinary = BinaryStream.Read
+ Set BinaryStream = Nothing
+End Function
+
+Function Stream_BinaryToString(Binary)
+ Set BinaryStream = CreateObject("ADODB.Stream")
+ BinaryStream.Type = 1
+ BinaryStream.Open
+ BinaryStream.Write Binary
+ BinaryStream.Position = 0
+ BinaryStream.Type = 2
+ ' All Format =>  utf-16le - utf-8 - utf-16le
+ BinaryStream.CharSet = "utf-8"
+ Stream_BinaryToString = BinaryStream.ReadText
+ Set BinaryStream = Nothing
+End Function
